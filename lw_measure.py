@@ -59,6 +59,33 @@ class Image_Processing():
         img = img[bottom:top, left:right]
         return img
 
+    def rotation(self, img, angle):
+        h = img.shape[0]
+        w = img.shape[1]
+        center = (int(w/2), int(h/2))
+        trans = cv2.getRotationMatrix2D(center, angle, 1.0)
+        img = cv2.warpAffine(img, trans, (w,h))
+        return img 
+
+    def flip(self, img, dir='tb'):
+        dic = {'tb':0, 'lr':1, 'tblr':-1}
+        code = dic[dir]
+        img = cv2.flip(img, code)
+        return img
+
+    def regrid(self, img, magx, magy, osize=None, method='linear'):
+        dic = {'nearest':cv2.INTER_NEAREST,\
+               'linear':cv2.INTER_LINEAR,\
+               'cubic':cv2.INTER_CUBIC,\
+               'area':cv2.INTER_AREA,\
+               'lanczos':cv2.INTER_LANCZOS4}
+        interpolation = dic[method]
+        if osize is None:
+            img = cv2.resize(img, dsize=osize, fx=magx, fy=magy, interpolation=interpolation)
+        else:
+            img = cv2.resize(img, dsize=osize, interpolation=interpolation)
+        return img
+
     def add_white_noise(self, img, level=1):
         wn = np.random.rand(img.shape[0], img.shape[1])
         img = img + wn * level
@@ -151,6 +178,12 @@ class Signal_Processing():
         signal = np.absolute(signal)
         return signal
 
+    def moving_average(self, signal, size):
+        size = int(size)
+        ma = np.ones(size)/size
+        signal = np.convolve(signal, ma, mode='same')
+        return signal
+
     def search_peak(self, signal, area, threshold, dir=True, No=0):
         signal_ind = np.where(signal>threshold)[0]
         signal_ind = signal_ind[signal_ind >= area[0]]
@@ -199,6 +232,7 @@ if __name__ == "__main__":
     img = ctrl.add_white_noise(img, 100)
     signal = Signal_Processing()
     s = signal.image2signal(img, dir=0, area=[0.45, 0.55], method='average')
+    s = signal.moving_average(s, 3)
     d = signal.diff_signal(s, 1)
     dd = signal.diff_signal(d, 1)
     d = signal.abs_signal(d)
